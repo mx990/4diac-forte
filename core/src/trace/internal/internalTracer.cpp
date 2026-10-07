@@ -18,6 +18,7 @@
 
 namespace forte::trace {
   CInternalTracer::CInternalTracer(StringId, size_t) {
+    setGlobalEnabled(true);
   }
 
   void CInternalTracer::traceInstanceData(const char *const paTypeName,
@@ -96,10 +97,6 @@ namespace forte::trace {
                                         const char *const paValue) {
     mEvents.emplace_back("outputData", std::make_unique<FBDataPayload>(paTypeName, paInstanceName, paDataId, paValue),
                          arch::getNanoSecondsMonotonic());
-  }
-
-  bool CInternalTracer::isEnabled() {
-    return true;
   }
 
   void CInternalTracer::fillStringsVector(const char *const *const paIn,

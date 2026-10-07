@@ -16,6 +16,7 @@
 #define INTERNAL_TRACER_H
 
 #include <vector>
+#include <atomic>
 
 #include "EventMessage.h"
 #include "forte/stringid.h"
@@ -75,7 +76,13 @@ namespace forte::trace {
                            const uint64_t paDataId,
                            const char *const paValue);
 
-      bool isEnabled();
+      bool isEnabled() {
+        return true;
+      }
+
+      static bool isGlobalEnabled() {
+        return smGlobalEnabled.load(std::memory_order_relaxed);
+      }
 
       /**
        * @brief Get the traced events
@@ -85,6 +92,12 @@ namespace forte::trace {
       const std::vector<EventMessage> &getEvents() const;
 
     private:
+      static void setGlobalEnabled(const bool paEnabled) {
+        smGlobalEnabled.store(paEnabled, std::memory_order_relaxed);
+      }
+
+      static inline constinit std::atomic<bool> smGlobalEnabled;
+
       /**
        * @brief Fills the given vector with the array of const char* information. The vector must already contain the
        * expected amount of elements to be inserted, defined by paLen. This help performance by allocating the vector
