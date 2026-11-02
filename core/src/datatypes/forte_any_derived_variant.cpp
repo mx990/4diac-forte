@@ -12,13 +12,43 @@
  *******************************************************************************/
 #include "forte/datatypes/forte_any_derived_variant.h"
 
+#include <atomic>
+#include <cstdio>
+
 using namespace forte::literals;
 
 namespace forte {
   DEFINE_FIRMWARE_DATATYPE(ANY_DERIVED_VARIANT, "ANY_DERIVED"_STRID)
 
+  bool CIEC_ANY_DERIVED_VARIANT::hasInvalidState() const {
+    const auto &state = static_cast<const variant &>(*this);
+    const auto *array = std::get_if<CIEC_ANY_UNIQUE_PTR<CIEC_ARRAY>>(&state);
+    const auto *structure = std::get_if<CIEC_ANY_UNIQUE_PTR<CIEC_STRUCT>>(&state);
+    return state.valueless_by_exception() || (array && !array->get()) || (structure && !structure->get());
+  }
+
+  void CIEC_ANY_DERIVED_VARIANT::traceState(const char *paOperation, int paInputType, bool paForce) const {
+    const auto &state = static_cast<const variant &>(*this);
+    const auto *array = std::get_if<CIEC_ANY_UNIQUE_PTR<CIEC_ARRAY>>(&state);
+    const auto *structure = std::get_if<CIEC_ANY_UNIQUE_PTR<CIEC_STRUCT>>(&state);
+    const void *pointee = array       ? static_cast<const void *>(array->get())
+                          : structure ? static_cast<const void *>(structure->get())
+                                      : nullptr;
+    const bool abnormal = state.valueless_by_exception() || !pointee;
+    static std::atomic<unsigned int> normalCount{0};
+    if (paForce || abnormal || normalCount.fetch_add(1, std::memory_order_relaxed) < 128) {
+      std::fprintf(stderr,
+                   "[derived-variant-diagnostic] %s object=%p index=%zu valueless=%d pointee=%p input-type=%d\n",
+                   paOperation, static_cast<const void *>(this), state.index(),
+                   static_cast<int>(state.valueless_by_exception()), pointee, paInputType);
+      std::fflush(stderr);
+    }
+  }
+
   void CIEC_ANY_DERIVED_VARIANT::setValue(const CIEC_ANY &paValue) {
-    switch (paValue.getDataTypeID()) {
+    const auto inputType = paValue.getDataTypeID();
+    traceState("set-value-before", static_cast<int>(inputType));
+    switch (inputType) {
       case e_ANY: CIEC_ANY_DERIVED_VARIANT::setValue(paValue.unwrap()); break;
       case e_ARRAY:
         operator=(CIEC_ANY_UNIQUE_PTR<CIEC_ARRAY>(static_cast<CIEC_ARRAY *>(paValue.clone(nullptr))));
@@ -28,9 +58,13 @@ namespace forte {
         break;
       default: break;
     }
+    traceState("set-value-after", static_cast<int>(inputType));
   }
 
   CIEC_ANY &CIEC_ANY_DERIVED_VARIANT::unwrap() {
+    if (hasInvalidState()) {
+      traceState("unwrap-null");
+    }
     return std::visit(
         [](auto &&value) -> CIEC_ANY & {
           using T = std::decay_t<decltype(value)>;
@@ -48,6 +82,9 @@ namespace forte {
   }
 
   const CIEC_ANY &CIEC_ANY_DERIVED_VARIANT::unwrap() const {
+    if (hasInvalidState()) {
+      traceState("unwrap-const-null");
+    }
     return std::visit(
         [](auto &&value) -> const CIEC_ANY & {
           using T = std::decay_t<decltype(value)>;

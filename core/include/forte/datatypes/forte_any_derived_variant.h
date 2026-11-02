@@ -37,17 +37,25 @@ namespace forte {
       static inline constexpr bool always_false_v = false;
 
       CIEC_ANY_DERIVED_VARIANT() : variant(std::make_unique<CIEC_ANY_STRUCT>()) {
+        traceState("default-constructed", -1, index() != 1);
       }
 
-      CIEC_ANY_DERIVED_VARIANT(const CIEC_ANY_DERIVED_VARIANT &paVal) : variant(paVal) {
+      CIEC_ANY_DERIVED_VARIANT(const CIEC_ANY_DERIVED_VARIANT &paVal) : variant(traceCopySource(paVal)) {
+        traceState("copy-constructed");
       }
 
       CIEC_ANY_DERIVED_VARIANT(const CIEC_ANY &paVal) {
+        traceState("any-construct-before-set", static_cast<int>(paVal.getDataTypeID()));
         setValue(paVal.unwrap());
+        traceState("any-constructed", static_cast<int>(paVal.getDataTypeID()));
       }
 
       CIEC_ANY_DERIVED_VARIANT &operator=(const CIEC_ANY_DERIVED_VARIANT &paOther) {
+        const bool abnormal = hasInvalidState() || paOther.hasInvalidState();
+        traceState("copy-assign-dst-before", -1, abnormal);
+        paOther.traceState("copy-assign-src-before", -1, abnormal);
         variant::operator=(paOther);
+        traceState("copy-assign-dst-after", -1, abnormal);
         return *this;
       }
 
@@ -71,6 +79,15 @@ namespace forte {
 
       [[nodiscard]] bool equals(const CIEC_ANY &paOther) const override {
         return unwrap().equals(paOther.unwrap());
+      }
+
+    private:
+      // Temporary CI diagnostics; state inspection never dereferences an alternative.
+      [[nodiscard]] bool hasInvalidState() const;
+      void traceState(const char *paOperation, int paInputType = -1, bool paForce = false) const;
+      static const CIEC_ANY_DERIVED_VARIANT &traceCopySource(const CIEC_ANY_DERIVED_VARIANT &paSource) {
+        paSource.traceState("copy-construct-src-before");
+        return paSource;
       }
   };
 
