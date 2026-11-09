@@ -15,6 +15,8 @@
 
 #include "socket.h"
 
+#include "../../../../common/src/com/impl/parallel_state.h"
+
 #include <string_view>
 #include <netdb.h>
 
@@ -26,5 +28,10 @@ namespace forte::com::impl::net {
   ComResultValue<addrinfo *> resolve(std::string_view paConfigString, const addrinfo &paHints);
 
   ComResultValue<Socket> open(std::string_view paConfigString, const addrinfo &paHints);
+
+  ComResultValue<ParallelConnectionState<Socket>> openParallel(std::string_view paConfigString,
+                                                               const addrinfo &paHints);
+
+  ComResultValue<Socket> pollParallel(ParallelConnectionState<Socket> &paState);
 
 } // namespace forte::com::impl::net
