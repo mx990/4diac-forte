@@ -37,6 +37,8 @@ namespace forte::com::test {
       static inline int smPollCalls = 0;
       static inline int smSentCallbacks = 0;
       static inline int smReceiveCallbacks = 0;
+      static inline bool smInInitCallback = false;
+      static inline int smDestroyedDuringInitCallback = 0;
       static inline int smNextIdentity = 0;
       static inline ComResult smNextOpenResult = ComResult::Ok;
       static inline ComResult smNextSendResult = ComResult::Ok;
@@ -55,6 +57,9 @@ namespace forte::com::test {
       }
 
       ~TestChannelFixtureBase() override {
+        if (smInInitCallback) {
+          ++smDestroyedDuringInitCallback;
+        }
         ++smDestroyed;
       }
 
@@ -70,6 +75,15 @@ namespace forte::com::test {
 
       ComResult poll() override {
         ++smPollCalls;
+        if (mInitCompletionResult.has_value()) {
+          const ComResult result = *mInitCompletionResult;
+          mInitCompletionResult.reset();
+          mIsOpen = result == ComResult::Ok;
+          smInInitCallback = true;
+          this->getObserver().init(result, *this);
+          smInInitCallback = false;
+          return ComResult::Async;
+        }
         if (mSendCompletionResult.has_value()) {
           const ComResult result = *mSendCompletionResult;
           mSendCompletionResult.reset();
@@ -125,6 +139,10 @@ namespace forte::com::test {
         return mConfigString;
       }
 
+      void completeInit(const ComResult paResult) {
+        mInitCompletionResult = paResult;
+      }
+
       void completeSend(const ComResult paResult) {
         mSendCompletionResult = paResult;
       }
@@ -148,6 +166,8 @@ namespace forte::com::test {
         smPollCalls = 0;
         smSentCallbacks = 0;
         smReceiveCallbacks = 0;
+        smInInitCallback = false;
+        smDestroyedDuringInitCallback = 0;
         smNextIdentity = 0;
         smNextOpenResult = ComResult::Ok;
         smNextSendResult = ComResult::Ok;
@@ -166,6 +186,7 @@ namespace forte::com::test {
 
     private:
       int mIdentity;
+      std::optional<ComResult> mInitCompletionResult;
       std::optional<ComResult> mSendCompletionResult;
       std::optional<T> mReceiveCompletionData;
   };
@@ -218,13 +239,22 @@ namespace forte::com::test {
         mLastSentChannel = &paChannel;
       }
 
+      void init(const ComResult paResult, ComChannel<T> &paChannel) override {
+        ++mInitCalls;
+        mLastInitResult = paResult;
+        mLastInitChannel = &paChannel;
+      }
+
       int mReceiveCalls = 0;
       int mSentCalls = 0;
+      int mInitCalls = 0;
       std::size_t mLastReceiveSize = 0;
       ComResult mReceiveResult = ComResult::Ok;
       ComResult mLastSentResult = ComResult::Ok;
+      ComResult mLastInitResult = ComResult::Ok;
       ComChannel<T> *mLastReceiveChannel = nullptr;
       ComChannel<T> *mLastSentChannel = nullptr;
+      ComChannel<T> *mLastInitChannel = nullptr;
   };
 
   class TestVariantObserver final : public TestObserverFixtureBase<std::span<CIEC_ANY_VARIANT>> {

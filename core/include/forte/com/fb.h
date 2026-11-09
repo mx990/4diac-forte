@@ -30,6 +30,7 @@ namespace forte::com {
       static constexpr TEventID scmEventINITOID = 0;
       static constexpr TEventID scmEventSentID = cgExternalEventID - 1;
       static constexpr TEventID scmEventReceiveID = cgExternalEventID - 2;
+      static constexpr TEventID scmEventInitID = cgExternalEventID - 3;
 
     protected:
       CommunicationFB(CFBContainer &paContainer, const SFBInterfaceSpec &paInterfaceSpec, StringId paInstanceNameId);
@@ -44,6 +45,7 @@ namespace forte::com {
       ComResult receive(std::span<CIEC_ANY_VARIANT> paData,
                         ComChannel<std::span<CIEC_ANY_VARIANT>> &paChannel) override;
       void sent(ComResult paResult, ComChannel<std::span<CIEC_ANY_VARIANT>> &paChannel) override;
+      void init(ComResult paResult, ComChannel<std::span<CIEC_ANY_VARIANT>> &paChannel) override;
       std::optional<std::span<CIEC_ANY_VARIANT>> getReceiveBuffer() override;
       std::optional<std::span<CIEC_ANY_VARIANT>> getSendBuffer() override;
 

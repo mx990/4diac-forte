@@ -48,11 +48,13 @@ namespace forte::com {
     if (paEIID == scmEventINITID) {
       setEventChainExecutor(paECET);
       if (var_QI) {
-        open(var_ID.getValue());
+        if (open(var_ID.getValue()) != ComResult::Async) {
+          sendOutputEvent(scmEventINITOID, paECET);
+        }
       } else {
         close();
+        sendOutputEvent(scmEventINITOID, paECET);
       }
-      sendOutputEvent(scmEventINITOID, paECET);
     }
   }
 
@@ -104,6 +106,11 @@ namespace forte::com {
   void CommunicationFB::sent(const ComResult paResult, ComChannel<std::span<CIEC_ANY_VARIANT>> &) {
     setStatus(paResult);
     getEventChainExecutor()->startEventChain({*this, scmEventSentID});
+  }
+
+  void CommunicationFB::init(const ComResult paResult, ComChannel<std::span<CIEC_ANY_VARIANT>> &paChannel) {
+    setStatus(paResult);
+    getEventChainExecutor()->startEventChain({*this, scmEventInitID});
   }
 
   std::optional<std::span<CIEC_ANY_VARIANT>> CommunicationFB::getReceiveBuffer() {

@@ -14,7 +14,7 @@
 #pragma once
 
 #include <span>
-
+#include <string>
 #include "forte/com/channel.h"
 #include "forte/com/buffer.h"
 #include "forte/datatypes/forte_any_variant.h"
@@ -38,6 +38,7 @@ namespace forte::com::impl {
 
       ComResult receive(ComBuffer paData, ComChannel<ComBuffer> &paChannel) override;
       void sent(ComResult paResult, ComChannel<ComBuffer> &paChannel) override;
+      void init(ComResult paResult, ComChannel<ComBuffer> &paChannel) override;
 
       ComResult setMinReceiveSize(std::size_t paSize) override;
       ComResult setMaxReceiveSize(std::size_t paSize) override;

@@ -22,6 +22,10 @@ namespace forte::com {
   template<typename T>
   class ComChannel;
 
+  /**
+   * \brief An observer for a channel
+   * \note Implementations must not delete the passed channel.
+   */
   template<typename T>
   class ComObserver {
     public:
@@ -32,6 +36,7 @@ namespace forte::com {
        * \return The result of receiving the data
        * \retval Ok The data has been successfully received
        * \retval More Retry once more data is available
+       * \note This is called only during ComChannel::poll().
        */
       virtual ComResult receive(T paData, ComChannel<T> &paChannel) = 0;
 
@@ -39,8 +44,19 @@ namespace forte::com {
        * \brief Data was sent via the channel
        * \param paResult The result of sending the data
        * \param paChannel The channel
+       * \note This completes a prior send operation that returned ComResult::Async
+       * and is called only during ComChannel::poll().
        */
       virtual void sent(ComResult paResult, ComChannel<T> &paChannel) = 0;
+
+      /**
+       * \brief Channel was initialized asynchronously
+       * \param paResult The result of initializing the channel
+       * \param paChannel The channel
+       * \note This completes a prior open operation that returned ComResult::Async
+       * and is called only during ComChannel::poll().
+       */
+      virtual void init(ComResult paResult, ComChannel<T> &paChannel) = 0;
 
       /**
        * \brief Get the receive buffer

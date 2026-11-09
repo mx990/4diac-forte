@@ -114,6 +114,10 @@ namespace forte::com::impl {
     getObserver().sent(paResult, *this);
   }
 
+  void RawChannel::init(const ComResult paResult, ComChannel<ComBuffer> &) {
+    getObserver().init(paResult, *this);
+  }
+
   ComResult RawChannel::poll() {
     return mChannel ? mChannel->poll() : ComResult::NoSocket;
   }

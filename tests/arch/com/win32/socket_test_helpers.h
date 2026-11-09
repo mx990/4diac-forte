@@ -45,6 +45,9 @@ namespace forte::com::test {
       void sent(ComResult, ComChannel<ComBuffer> &) override {
       }
 
+      void init(ComResult, ComChannel<ComBuffer> &) override {
+      }
+
       std::string mReceived;
       ComResult mReceiveResult{ComResult::Ok};
   };

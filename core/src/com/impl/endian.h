@@ -38,6 +38,7 @@ namespace forte::com::impl {
 
       ComResult receive(std::span<CIEC_ANY_VARIANT> paData, ComChannel &paChannel) override;
       void sent(ComResult paResult, ComChannel &paChannel) override;
+      void init(ComResult paResult, ComChannel &paChannel) override;
 
       ComResult setMinReceiveSize(std::size_t paSize) override;
       ComResult setMaxReceiveSize(std::size_t paSize) override;

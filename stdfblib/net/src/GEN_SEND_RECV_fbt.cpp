@@ -56,6 +56,7 @@ namespace forte::iec61499::net {
         break;
       case scmEventSentID: sendOutputEvent(scmEventCNFID, paECET); break;
       case scmEventReceiveID: sendOutputEvent(scmEventINDID, paECET); break;
+      case scmEventInitID: sendOutputEvent(scmEventINITOID, paECET); break;
       default: CommunicationFB::executeEvent(paEIID, paECET); break;
     }
   }

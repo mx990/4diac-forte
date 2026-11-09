@@ -78,6 +78,58 @@ namespace forte::com::test {
     BOOST_TEST(!channel.isOpen());
   }
 
+  BOOST_AUTO_TEST_CASE(OPEN_ASYNC) {
+    TestBufferChannel::reset();
+    TestBufferChannel::smNextOpenResult = ComResult::Async;
+    TestVariantObserver observer;
+    impl::RawChannel channel(observer);
+
+    BOOST_TEST(
+        channel.open({}, std::array{
+                             ComChannelDescriptor{.mChannel = "test-buffer-channel"_STRID, .mConfigString = "child"},
+                         }) == ComResult::Async);
+    BOOST_TEST(!channel.isOpen());
+
+    TestBufferChannel::smLastChannel->completeInit(ComResult::Ok);
+    BOOST_TEST(channel.poll() == ComResult::Async);
+    BOOST_TEST(channel.isOpen());
+    BOOST_TEST(observer.mInitCalls == 1);
+    BOOST_TEST(observer.mLastInitResult == ComResult::Ok);
+    BOOST_TEST(observer.mLastInitChannel == &channel);
+  }
+
+  BOOST_AUTO_TEST_CASE(OPEN_RETRY) {
+    TestBufferChannel::reset();
+    TestBufferChannel::smNextOpenResult = ComResult::InProgress;
+    TestVariantObserver observer;
+    impl::RawChannel channel(observer);
+
+    BOOST_TEST(
+        channel.open({}, std::array{
+                             ComChannelDescriptor{.mChannel = "test-buffer-channel"_STRID, .mConfigString = "child"},
+                         }) == ComResult::InProgress);
+    BOOST_TEST(TestBufferChannel::smCreated == 1);
+    BOOST_TEST(TestBufferChannel::smOpenCalls == 1);
+    BOOST_TEST(!channel.isOpen());
+
+    BOOST_TEST(
+        channel.open({}, std::array{
+                             ComChannelDescriptor{.mChannel = "test-buffer-channel"_STRID, .mConfigString = "child"},
+                         }) == ComResult::InProgress);
+    BOOST_TEST(TestBufferChannel::smCreated == 1);
+    BOOST_TEST(TestBufferChannel::smOpenCalls == 2);
+    BOOST_TEST(!channel.isOpen());
+
+    TestBufferChannel::smNextOpenResult = ComResult::Ok;
+    BOOST_TEST(
+        channel.open({}, std::array{
+                             ComChannelDescriptor{.mChannel = "test-buffer-channel"_STRID, .mConfigString = "child"},
+                         }) == ComResult::Ok);
+    BOOST_TEST(TestBufferChannel::smCreated == 1);
+    BOOST_TEST(TestBufferChannel::smOpenCalls == 3);
+    BOOST_TEST(channel.isOpen());
+  }
+
   BOOST_AUTO_TEST_CASE(VALID_CONFIG) {
     TestBufferChannel::reset();
     TestVariantObserver observer;

@@ -77,6 +77,54 @@ namespace forte::com::test {
     BOOST_TEST(!channel.isOpen());
   }
 
+  BOOST_AUTO_TEST_CASE(OPEN_ASYNC) {
+    TestChannel::reset();
+    TestChannel::smNextOpenResult = ComResult::Async;
+    TestVariantObserver observer;
+    impl::EndianChannel channel(observer);
+
+    BOOST_TEST(channel.open({}, std::array{
+                                    ComChannelDescriptor{.mChannel = "test-channel"_STRID, .mConfigString = "child"},
+                                }) == ComResult::Async);
+    BOOST_TEST(!channel.isOpen());
+
+    TestChannel::smLastChannel->completeInit(ComResult::Ok);
+    BOOST_TEST(channel.poll() == ComResult::Async);
+    BOOST_TEST(channel.isOpen());
+    BOOST_TEST(observer.mInitCalls == 1);
+    BOOST_TEST(observer.mLastInitResult == ComResult::Ok);
+    BOOST_TEST(observer.mLastInitChannel == &channel);
+  }
+
+  BOOST_AUTO_TEST_CASE(OPEN_RETRY) {
+    TestChannel::reset();
+    TestChannel::smNextOpenResult = ComResult::InProgress;
+    TestVariantObserver observer;
+    impl::EndianChannel channel(observer);
+
+    BOOST_TEST(channel.open({}, std::array{
+                                    ComChannelDescriptor{.mChannel = "test-channel"_STRID, .mConfigString = "child"},
+                                }) == ComResult::InProgress);
+    BOOST_TEST(TestChannel::smCreated == 1);
+    BOOST_TEST(TestChannel::smOpenCalls == 1);
+    BOOST_TEST(!channel.isOpen());
+
+    BOOST_TEST(channel.open({}, std::array{
+                                    ComChannelDescriptor{.mChannel = "test-channel"_STRID, .mConfigString = "child"},
+                                }) == ComResult::InProgress);
+    BOOST_TEST(TestChannel::smCreated == 1);
+    BOOST_TEST(TestChannel::smOpenCalls == 2);
+    BOOST_TEST(!channel.isOpen());
+
+    TestChannel::smNextOpenResult = ComResult::Ok;
+    BOOST_TEST(channel.open({}, std::array{
+                                    ComChannelDescriptor{.mChannel = "test-channel"_STRID, .mConfigString = "child"},
+                                }) == ComResult::Ok);
+    BOOST_TEST(TestChannel::smCreated == 1);
+    BOOST_TEST(TestChannel::smOpenCalls == 3);
+    BOOST_TEST(channel.isOpen());
+  }
+
   BOOST_AUTO_TEST_CASE(VALID_CONFIG) {
     TestChannel::reset();
     TestVariantObserver observer;

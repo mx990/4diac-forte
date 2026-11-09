@@ -96,6 +96,10 @@ namespace forte::com::impl {
     getObserver().sent(paResult, *this);
   }
 
+  void EndianChannel::init(const ComResult paResult, ComChannel &) {
+    getObserver().init(paResult, *this);
+  }
+
   ComResult EndianChannel::poll() {
     return mChannel ? mChannel->poll() : ComResult::NoSocket;
   }
